@@ -1,0 +1,16 @@
+services:
+  web:
+    build: ${OSTEOPATHY_WEB_DIR}/
+    ports:
+      - "443:443"
+    volumes:
+      - ${BASICAUTH_DIR}/.htpasswd:/etc/nginx/.htpasswd
+      - ${CERTS_DIR}:/etc/ssl/server
+  back:
+    build: ${OSTEOPATHY_BACK_DIR}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:/app/h2/h2db;DB_CLOSE_DELAY=-1
+      SPRING_H2_CONSOLE_SETTINGS_WEBALLOWOTHERS: true
+      SPRING_JPA_HIBERNATE_DDLAUTO: update
+    volumes:
+      - ${H2DB_DIR}:/app/h2
