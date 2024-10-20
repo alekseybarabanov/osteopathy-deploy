@@ -1,5 +1,6 @@
 services:
   web:
+    container_name: web
     build: ${OSTEOPATHY_WEB_DIR}/
     ports:
       - "443:443"
@@ -7,6 +8,7 @@ services:
       - ${BASICAUTH_DIR}/.htpasswd:/etc/nginx/.htpasswd
       - ${CERTS_DIR}:/etc/ssl/server
   back:
+    container_name: back
     build: ${OSTEOPATHY_BACK_DIR}
     environment:
       SPRING_DATASOURCE_URL: jdbc:h2:/app/h2/h2db;DB_CLOSE_DELAY=-1
@@ -14,3 +16,83 @@ services:
       SPRING_JPA_HIBERNATE_DDLAUTO: update
     volumes:
       - ${H2DB_DIR}:/app/h2
+  postgres:
+    container_name: postgres
+    image: postgres:16.1-alpine3.18
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=50"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=768MB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "temp_file_limit=10GB"
+      - "-c"
+      - "log_min_duration_statement=200ms"
+      - "-c"
+      - "idle_in_transaction_session_timeout=10s"
+      - "-c"
+      - "lock_timeout=1s"
+      - "-c"
+      - "statement_timeout=60s"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.max=10000"
+      - "-c"
+      - "pg_stat_statements.track=all"
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testuserpassword
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - ${PG_INIT_SCRIPTS_DIR}
+      - ${PG_DATA_DIR}:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+    secrets:
+      - DB
+      - DB_USER
+      - DB_PASSWORD
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:8.2
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/PGADMIN_PASSWORD
+      PGADMIN_CONFIG_SERVER_MODE: "False" # To allow running in desktop mode
+    volumes:
+      - ${PG_ADMIN_DIR}:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    secrets:
+      - PGADMIN_PASSWORD
+
+secrets:
+  DB:
+    file: ${PG_SECRETS_DIR}/db.txt
+  DB_USER:
+    file: ${PG_SECRETS_DIR}/db_user.txt
+  DB_PASSWORD:
+    file: ${PG_SECRETS_DIR}/db_password.txt
+  PGADMIN_PASSWORD:
+    file: ${PGADMIN_SECRETS_DIR}/password.txt
+
