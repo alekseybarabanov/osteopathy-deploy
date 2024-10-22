@@ -11,11 +11,12 @@ services:
     container_name: back
     build: ${OSTEOPATHY_BACK_DIR}
     environment:
-      SPRING_DATASOURCE_URL: jdbc:h2:/app/h2/h2db;DB_CLOSE_DELAY=-1
-      SPRING_H2_CONSOLE_SETTINGS_WEBALLOWOTHERS: true
-      SPRING_JPA_HIBERNATE_DDLAUTO: update
-    volumes:
-      - ${H2DB_DIR}:/app/h2
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/test?currentSchema=${POSTGRES_SCHEMA}
+      SPRING_PROFILES_ACTIVE: pg
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULTSCHEMA: ${POSTGRES_SCHEMA}
+      SPRING_JPA_HIBERNATE_DDLAUTO: validate
   postgres:
     container_name: postgres
     image: postgres:16.1-alpine3.18
@@ -50,9 +51,9 @@ services:
       - "-c"
       - "pg_stat_statements.track=all"
     environment:
-      POSTGRES_DB: test
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testuserpassword
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: "/var/lib/postgresql/data/pgdata"
     volumes:
       - ${PG_INIT_SCRIPTS_DIR}
@@ -73,10 +74,9 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/PGADMIN_PASSWORD
       PGADMIN_CONFIG_SERVER_MODE: "False" # To allow running in desktop mode
+      SCRIPT_NAME: /pg/pgadmin
     volumes:
       - ${PG_ADMIN_DIR}:/var/lib/pgadmin
-    ports:
-      - "5050:80"
     restart: unless-stopped
     deploy:
       resources:
@@ -85,6 +85,14 @@ services:
           memory: 1G
     secrets:
       - PGADMIN_PASSWORD
+  dbeaver:
+      image: dbeaver/cloudbeaver:24.2.2
+      container_name: dbeaver
+      restart: always
+      environment:
+        CLOUDBEAVER_ROOT_URI: /dbeaver
+      volumes: 
+       - ${DBEAVER_DIR}:/opt/cloudbeaver/workspace  
 
 secrets:
   DB:
