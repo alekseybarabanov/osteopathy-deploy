@@ -11,12 +11,13 @@ services:
     container_name: back
     build: ${OSTEOPATHY_BACK_DIR}
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/test?currentSchema=${POSTGRES_SCHEMA}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}?currentSchema=${POSTGRES_SCHEMA}
       SPRING_PROFILES_ACTIVE: pg
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULTSCHEMA: ${POSTGRES_SCHEMA}
       SPRING_JPA_HIBERNATE_DDLAUTO: none
+      SPRING_JPA_PROPERTIES_HIBERNATE_SHOWSQL: false
   postgres:
     container_name: postgres
     image: postgres:16.1-alpine3.18
