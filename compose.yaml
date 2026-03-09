@@ -5,6 +5,10 @@ services:
     ports:
       - "443:443"
       - "80:80"
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GOOGLE_CALENDAR_IDS: ${GOOGLE_CALENDAR_IDS}
     volumes:
       - ${BASICAUTH_DIR}/.htpasswd:/etc/nginx/.htpasswd
       - ${CERTS_DIR}:/etc/ssl/server
