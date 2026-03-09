@@ -145,25 +145,25 @@ services:
         CLOUDBEAVER_ROOT_URI: /dbeaver
       volumes: 
        - ${DBEAVER_DIR}:/opt/cloudbeaver/workspace  
-  n8n:
-    image: n8nio/n8n
-    container_name: n8n
-    restart: always
-    environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_LOGIN}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-      - N8N_HOST=doctor-osteopat.kz
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - N8N_PATH=/n8n
-      - WEBHOOK_URL=https://doctor-osteopat.kz/n8n
-      - VUE_APP_PATH=/n8n/
-      - N8N_EDITOR_BASE_URL=https://doctor-osteopat.kz/n8n
-      - N8N_API_BASE_URL=https://doctor-osteopat.kz/n8n
-      - TZ=Asia/Almaty
-    volumes:
-      - ${N8N_DATA}:/home/node/.n8n:rw
+  #n8n:
+  #  image: n8nio/n8n
+  #  container_name: n8n
+  #  restart: always
+  #  environment:
+  #    - N8N_BASIC_AUTH_ACTIVE=true
+  #    - N8N_BASIC_AUTH_USER=${N8N_LOGIN}
+  #    - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+  #    - N8N_HOST=doctor-osteopat.kz
+  #    - N8N_PORT=5678
+  #    - N8N_PROTOCOL=http
+  #    - N8N_PATH=/n8n
+  #    - WEBHOOK_URL=https://doctor-osteopat.kz/n8n
+  #    - VUE_APP_PATH=/n8n/
+  #    - N8N_EDITOR_BASE_URL=https://doctor-osteopat.kz/n8n
+  #    - N8N_API_BASE_URL=https://doctor-osteopat.kz/n8n
+  #    - TZ=Asia/Almaty
+  #  volumes:
+  #    - ${N8N_DATA}:/home/node/.n8n:rw
 
 secrets:
   DB:
