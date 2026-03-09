@@ -4,9 +4,11 @@ services:
     build: ${OSTEOPATHY_WEB_DIR}/
     ports:
       - "443:443"
+      - "80:80"
     volumes:
       - ${BASICAUTH_DIR}/.htpasswd:/etc/nginx/.htpasswd
       - ${CERTS_DIR}:/etc/ssl/server
+      - ${ABOUT_DIR}:/usr/share/nginx/about
   back:
     container_name: back
     build: ${OSTEOPATHY_BACK_DIR}
@@ -59,11 +61,55 @@ services:
     volumes:
       - ${PG_INIT_SCRIPTS_DIR}
       - ${PG_DATA_DIR}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
     deploy:
       resources:
         limits:
           cpus: '1'
           memory: 2G
+    secrets:
+      - DB
+      - DB_USER
+      - DB_PASSWORD
+        #  keycloak:
+        #container_name: keycloak
+        #image: quay.io/keycloak/keycloak:26.1
+        #environment:
+        #KC_BOOTSTRAP_ADMIN_USERNAME: admin
+        #KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+        #deploy:
+        #resources:
+        #limits:
+        #  cpus: '0.1'
+        #  memory: 1G
+  pg-backup:
+    container_name: backup
+    build: ${OSTEOPATHY_BACKUP_DIR}/
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TZ: "Asia/Almaty"
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGSCHEMA: ${POSTGRES_SCHEMA}
+      TABLES: "audit patient visit"
+      CRON_SCHEDULE: "0 2 * * *"
+      ARCHIVE_FORMAT: "tar.gz"          # или "zip"
+      COMPRESS_INDIVIDUAL: "false"       # сжимать каждую таблицу отдельно
+      KEEP_CSV: "false"                  # оставлять .csv рядом с .csv.gz
+      RETAIN_COUNT: "10"                # хранить 10 последних архивов
+      STARTUP_BACKUP: "true"            # запуск бэкапа при старте контейнера
+    volumes:
+      - ${PG_ARCHIVE_DIR}:/backup        
     secrets:
       - DB
       - DB_USER
@@ -78,6 +124,7 @@ services:
       SCRIPT_NAME: /pg/pgadmin
     volumes:
       - ${PG_ADMIN_DIR}:/var/lib/pgadmin
+      - ${PG_BACKUP_DIR}:/home/backup
     restart: unless-stopped
     deploy:
       resources:
@@ -94,6 +141,25 @@ services:
         CLOUDBEAVER_ROOT_URI: /dbeaver
       volumes: 
        - ${DBEAVER_DIR}:/opt/cloudbeaver/workspace  
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    restart: always
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_LOGIN}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      - N8N_HOST=doctor-osteopat.kz
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_PATH=/n8n
+      - WEBHOOK_URL=https://doctor-osteopat.kz/n8n
+      - VUE_APP_PATH=/n8n/
+      - N8N_EDITOR_BASE_URL=https://doctor-osteopat.kz/n8n
+      - N8N_API_BASE_URL=https://doctor-osteopat.kz/n8n
+      - TZ=Asia/Almaty
+    volumes:
+      - ${N8N_DATA}:/home/node/.n8n:rw
 
 secrets:
   DB:
