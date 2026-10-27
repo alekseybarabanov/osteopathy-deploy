@@ -2,9 +2,10 @@ services:
   web:
     container_name: web
     build: ${OSTEOPATHY_WEB_DIR}/
+    restart: unless-stopped
     ports:
-      - "443:443"
-      - "80:80"
+      # 443 -> 4443: доступ по публичному IP; :80 (визитка/политика) не публикуется — на Pi порт 80 занят Caddy
+      - "4443:443"
     environment:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
@@ -16,6 +17,10 @@ services:
   back:
     container_name: back
     build: ${OSTEOPATHY_BACK_DIR}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}?currentSchema=${POSTGRES_SCHEMA}
       SPRING_PROFILES_ACTIVE: pg
@@ -27,6 +32,7 @@ services:
   postgres:
     container_name: postgres
     image: postgres:16.1-alpine3.18
+    restart: unless-stopped
     command:
       - "postgres"
       - "-c"
@@ -91,60 +97,62 @@ services:
         #limits:
         #  cpus: '0.1'
         #  memory: 1G
-  pg-backup:
-    container_name: backup
-    build: ${OSTEOPATHY_BACKUP_DIR}/
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      TZ: "Asia/Almaty"
-      PGHOST: postgres
-      PGPORT: 5432
-      PGDATABASE: ${POSTGRES_DB}
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGSCHEMA: ${POSTGRES_SCHEMA}
-      TABLES: "audit patient visit"
-      CRON_SCHEDULE: "0 2 * * *"
-      ARCHIVE_FORMAT: "tar.gz"          # или "zip"
-      COMPRESS_INDIVIDUAL: "false"       # сжимать каждую таблицу отдельно
-      KEEP_CSV: "false"                  # оставлять .csv рядом с .csv.gz
-      RETAIN_COUNT: "10"                # хранить 10 последних архивов
-      STARTUP_BACKUP: "true"            # запуск бэкапа при старте контейнера
-    volumes:
-      - ${PG_ARCHIVE_DIR}:/backup        
-    secrets:
-      - DB
-      - DB_USER
-      - DB_PASSWORD
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4:8.2
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/PGADMIN_PASSWORD
-      PGADMIN_CONFIG_SERVER_MODE: "False" # To allow running in desktop mode
-      SCRIPT_NAME: /pg/pgadmin
-    volumes:
-      - ${PG_ADMIN_DIR}:/var/lib/pgadmin
-      - ${PG_BACKUP_DIR}:/home/backup
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 1G
-    secrets:
-      - PGADMIN_PASSWORD
-  dbeaver:
-      image: dbeaver/cloudbeaver:24.2.2
-      container_name: dbeaver
-      restart: always
-      environment:
-        CLOUDBEAVER_ROOT_URI: /dbeaver
-      volumes: 
-       - ${DBEAVER_DIR}:/opt/cloudbeaver/workspace  
+  # pg-backup, pgadmin, dbeaver отключены при развёртывании на Pi (2026-10-27):
+  # код pg-backup утерян, админки БД не нужны
+  #pg-backup:
+  #  container_name: backup
+  #  build: ${OSTEOPATHY_BACKUP_DIR}/
+  #  depends_on:
+  #    postgres:
+  #      condition: service_healthy
+  #  environment:
+  #    TZ: "Asia/Almaty"
+  #    PGHOST: postgres
+  #    PGPORT: 5432
+  #    PGDATABASE: ${POSTGRES_DB}
+  #    PGUSER: ${POSTGRES_USER}
+  #    PGPASSWORD: ${POSTGRES_PASSWORD}
+  #    PGSCHEMA: ${POSTGRES_SCHEMA}
+  #    TABLES: "audit patient visit"
+  #    CRON_SCHEDULE: "0 2 * * *"
+  #    ARCHIVE_FORMAT: "tar.gz"          # или "zip"
+  #    COMPRESS_INDIVIDUAL: "false"       # сжимать каждую таблицу отдельно
+  #    KEEP_CSV: "false"                  # оставлять .csv рядом с .csv.gz
+  #    RETAIN_COUNT: "10"                # хранить 10 последних архивов
+  #    STARTUP_BACKUP: "true"            # запуск бэкапа при старте контейнера
+  #  volumes:
+  #    - ${PG_ARCHIVE_DIR}:/backup        
+  #  secrets:
+  #    - DB
+  #    - DB_USER
+  #    - DB_PASSWORD
+  #pgadmin:
+  #  container_name: pgadmin
+  #  image: dpage/pgadmin4:8.2
+  #  environment:
+  #    PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+  #    PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/PGADMIN_PASSWORD
+  #    PGADMIN_CONFIG_SERVER_MODE: "False" # To allow running in desktop mode
+  #    SCRIPT_NAME: /pg/pgadmin
+  #  volumes:
+  #    - ${PG_ADMIN_DIR}:/var/lib/pgadmin
+  #    - ${PG_BACKUP_DIR}:/home/backup
+  #  restart: unless-stopped
+  #  deploy:
+  #    resources:
+  #      limits:
+  #        cpus: '0.5'
+  #        memory: 1G
+  #  secrets:
+  #    - PGADMIN_PASSWORD
+  #dbeaver:
+  #    image: dbeaver/cloudbeaver:24.2.2
+  #    container_name: dbeaver
+  #    restart: always
+  #    environment:
+  #      CLOUDBEAVER_ROOT_URI: /dbeaver
+  #    volumes: 
+  #     - ${DBEAVER_DIR}:/opt/cloudbeaver/workspace  
   #n8n:
   #  image: n8nio/n8n
   #  container_name: n8n
@@ -172,6 +180,6 @@ secrets:
     file: ${PG_SECRETS_DIR}/db_user.txt
   DB_PASSWORD:
     file: ${PG_SECRETS_DIR}/db_password.txt
-  PGADMIN_PASSWORD:
-    file: ${PGADMIN_SECRETS_DIR}/password.txt
+  #PGADMIN_PASSWORD:
+  #  file: ${PGADMIN_SECRETS_DIR}/password.txt
 
